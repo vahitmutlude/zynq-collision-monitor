@@ -20,7 +20,6 @@ begin
         
         );
 
-
     clk_process : process
     begin
         clk <= '0';
@@ -46,8 +45,23 @@ begin
         file_close(file_pointer);
         wait;
      end process;        
-      
-    
-             
      
+     result_file_write_process : process(clk)
+     file output_file : text open write_mode is "hw_results.txt";
+     variable row_line : line; 
+     
+     begin
+         
+     if rising_edge(clk) then
+            write(row_line,string'("  #Sim Time:"));
+            write(row_line, now);
+            write(row_line,string'("  #No Filter Distance:"));
+            write(row_line, sensor_data_out);
+            write(row_line,string'("  #Alarm:"));
+            write(row_line, alarm_i);
+            writeline(output_file, row_line);
+      end if;
+     
+     end process;
+                  
 end behavioral;
