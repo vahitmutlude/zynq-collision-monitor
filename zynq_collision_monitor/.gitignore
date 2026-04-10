@@ -1,19 +1,17 @@
-# Vivado and Log
-*.jou
-*.log
-*.str
-*.zip
-*.tar.gz
-
-# Vivado usw
 .Xil/
 *.cache/
 *.hw/
 *.ip_user_files/
 *.runs/
 *.sim/
+*.tmp/
+*.gen/
 
-# Vitis/SDK future
-.metadata/
-RemoteSystemsTempFiles/
-*.bit
+*.jou
+*.log
+*.str
+*.backup.*
+dfx_runtime.txt
+
+.DS_Store
+Thumbs.db

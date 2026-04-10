@@ -13,10 +13,10 @@ end entity;
 
 architecture behavioral of moving_average_filter is
 
-signal table_one : STD_LOGIC_VECTOR(15 downto 0) := (others => '0');
-signal table_two : STD_LOGIC_VECTOR(15 downto 0) := (others => '0');
-signal table_three : STD_LOGIC_VECTOR(15 downto 0) := (others => '0');
-signal table_four : STD_LOGIC_VECTOR(15 downto 0) := (others => '0');
+signal table_one : STD_LOGIC_VECTOR(15 downto 0) := (others => '1');
+signal table_two : STD_LOGIC_VECTOR(15 downto 0) := (others => '1');
+signal table_three : STD_LOGIC_VECTOR(15 downto 0) := (others => '1');
+signal table_four : STD_LOGIC_VECTOR(15 downto 0) := (others => '1');
 signal resume : unsigned(15 downto 0);
 
 begin
