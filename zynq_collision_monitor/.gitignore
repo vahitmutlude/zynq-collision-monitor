@@ -1,0 +1,19 @@
+# Vivado and Log
+*.jou
+*.log
+*.str
+*.zip
+*.tar.gz
+
+# Vivado usw
+.Xil/
+*.cache/
+*.hw/
+*.ip_user_files/
+*.runs/
+*.sim/
+
+# Vitis/SDK future
+.metadata/
+RemoteSystemsTempFiles/
+*.bit

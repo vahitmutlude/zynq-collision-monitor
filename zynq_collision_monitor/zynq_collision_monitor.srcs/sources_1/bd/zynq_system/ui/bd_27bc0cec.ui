@@ -1,0 +1,28 @@
+{
+   "ActiveEmotionalView":"Default View",
+   "Default View_ScaleFactor":"0.761803",
+   "Default View_TopLeft":"-20,-127",
+   "ExpandedHierarchyInLayout":"",
+   "guistr":"# # String gsaved with Nlview 7.8.0 2024-04-26 e1825d835c VDI=44 GEI=38 GUI=JA:21.0
+#  -string -flagsOSRD
+preplace port DDR -pg 1 -lvl 5 -x 1270 -y -50 -defaultsOSRD
+preplace port FIXED_IO -pg 1 -lvl 5 -x 1270 -y -20 -defaultsOSRD
+preplace inst processing_system7_0 -pg 1 -lvl 2 -x 420 -y 0 -defaultsOSRD
+preplace inst collision_monitor_ip_0 -pg 1 -lvl 1 -x 130 -y 0 -defaultsOSRD
+preplace inst axi_smc -pg 1 -lvl 4 -x 1110 -y 180 -defaultsOSRD
+preplace inst rst_ps7_0_50M -pg 1 -lvl 3 -x 790 -y 200 -defaultsOSRD
+preplace netloc processing_system7_0_FCLK_CLK0 1 0 4 20 80 230 -100 620 90 970
+preplace netloc processing_system7_0_FCLK_RESET0_N 1 2 1 610 40n
+preplace netloc rst_ps7_0_50M_peripheral_aresetn 1 0 4 30 100 NJ 100 NJ 100 960
+preplace netloc processing_system7_0_DDR 1 2 3 NJ -40 N -40 1250
+preplace netloc processing_system7_0_FIXED_IO 1 2 3 NJ -20 N -20 N
+preplace netloc processing_system7_0_M_AXI_GP0 1 2 2 NJ 0 980
+preplace netloc axi_smc_M00_AXI 1 0 5 20 -110 NJ -110 NJ -110 NJ -110 1240
+levelinfo -pg 1 0 130 420 790 1110 1270
+pagesize -pg 1 -db -bbox -sgen 0 -130 1380 300
+"
+}
+{
+   "da_axi4_cnt":"1",
+   "da_ps7_cnt":"1"
+}
