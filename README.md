@@ -1,33 +1,27 @@
 # zynq-collision-monitor
 
-> **HW/SW Co-Simulation of a Radar Collision Monitor on Zynq-7000 SoC**  
-> Built without physical hardware — using Virtual Prototyping to meet industry-grade verification standards.
+> **HW/SW Co-Simulation of a Radar Collision Monitor on Zynq-7000 SoC**
+> Built entirely in simulation — no physical board required.
 
 [![VHDL](https://img.shields.io/badge/RTL-VHDL-blue?style=flat-square)](https://en.wikipedia.org/wiki/VHDL)
 [![SystemVerilog](https://img.shields.io/badge/Testbench-SystemVerilog-blueviolet?style=flat-square)](https://en.wikipedia.org/wiki/SystemVerilog)
-[![MATLAB](https://img.shields.io/badge/Data-MATLAB-orange?style=flat-square)](https://www.mathworks.com/products/matlab.html)
-[![Vivado](https://img.shields.io/badge/Toolchain-Vivado-red?style=flat-square)](https://www.xilinx.com/products/design-tools/vivado.html)
-[![AXI4-Lite](https://img.shields.io/badge/Bus-AXI4--Lite-green?style=flat-square)](https://developer.arm.com/documentation/ihi0022/latest/)
-[![Platform](https://img.shields.io/badge/Target-Zynq--7000-lightgrey?style=flat-square)](https://www.xilinx.com/products/silicon-devices/soc/zynq-7000.html)
+[![Vivado](https://img.shields.io/badge/Toolchain-Vivado%202023.2-red?style=flat-square)](https://www.xilinx.com/products/design-tools/vivado.html)
 
 ---
 
-## Overview
+## How this project started
 
-This project demonstrates a full **HW/SW co-simulation pipeline** for a radar-based collision monitor, targeting the Xilinx Zynq-7000 SoC — designed and validated entirely in simulation without physical hardware access.
+I was researching FPGAs during my semester break when I came across a YouTube video of a SawStop table saw — the kind that detects a finger touching the blade and slams the brake in milliseconds to avoid a serious injury. I kept thinking: *the same idea, but with a radar and a car.* A system that sees something coming too close and reacts, fast, in hardware.
 
-Rather than the conventional "write VHDL and move on" approach, this project builds a four-stage industrial verification architecture:
+I didn't have a Zynq board. So the project evolved into what I could actually do without hardware: build the full HW/SW pipeline in simulation, using the Zynq VIP to stand in for a real ARM processor. That constraint turned out to be the most interesting part.
 
-1. **MATLAB** — Realistic radar sensor simulation with Gaussian noise and fixed-point quantization
-2. **VHDL RTL** — Resource-optimized Moving Average Filter + Decision Guard (Custom IP)
-3. **AXI4-Lite SoC integration** — Custom IP packaged as an AXI4-Lite Slave in Vivado Block Design
-4. **SystemVerilog + Zynq VIP** — Virtual ARM processor drives the AXI bus to simulate real PS↔PL communication
-
-**Core function:** Process noisy radar distance data, filter it via a DSP-efficient pipeline, and trigger a hardware alarm with microsecond precision when a critical proximity threshold is crossed.
+I worked on it pretty much every day for about a week, morning to evening, during the break after my 1st semester — and kept coming back to it in the early weeks of the 2nd semester to extend and refine it.
 
 ---
 
-## System Architecture
+## What the system does
+
+Noisy radar distance data → filtered in VHDL on the PL side → a virtual ARM processor on the PS side reads the result over AXI4-Lite → an alarm fires when something gets too close.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -35,7 +29,7 @@ Rather than the conventional "write VHDL and move on" approach, this project bui
 │                                                                         │
 │   ┌──────────────────────────────────────────────────────────────────┐  │
 │   │             Processing System (PS) — Zynq VIP                    │  │
-│   │           ARM Cortex-A9 (Virtual) via SystemVerilog              │  │
+│   │           Virtual ARM, driven by the SystemVerilog testbench     │  │
 │   │                    AXI4-Lite Master                              │  │
 │   └─────────────────────────┬────────────────────────────────────────┘  │
 │                             │ AXI4-Lite                                 │
@@ -47,13 +41,13 @@ Rather than the conventional "write VHDL and move on" approach, this project bui
 │   │           Programmable Logic (PL) — collision_monitor IP         │  │
 │   │                                                                  │  │
 │   │   slv_reg0 [0x00] ──► Moving Average Filter ──► Decision Guard   │  │
-│   │   (Distance In)        (4-stage shift reg,        (Alarm_o)      │  │
-│   │                         bit-shift ÷4)                            │  │
+│   │   (Distance In)        (4-tap, ÷4 as >> 2)        (Alarm_o)      │  │
+│   │                                                                  │  │
 │   │   slv_reg1 [0x04] ◄── Alarm Status                               │  │
 │   └──────────────────────────────────────────────────────────────────┘  │
 └─────────────────────────────────────────────────────────────────────────┘
          ▲
-         │ noisy_distance_data.txt (hex)
+         │ noisy_distance_data.txt
 ┌────────┴────────────┐
 │   MATLAB Simulation │
 │  Gaussian noise +   │
@@ -61,151 +55,194 @@ Rather than the conventional "write VHDL and move on" approach, this project bui
 └─────────────────────┘
 ```
 
-**AXI Register Map:**
+> 📷 **Add here:** `docs/block_design.png` — Vivado Block Design screenshot
 
-| Offset | Register   | Direction | Description           |
-|--------|------------|-----------|-----------------------|
-| `0x00` | `slv_reg0` | Write     | Radar distance input  |
-| `0x04` | `slv_reg1` | Read      | Alarm output status   |
+**AXI4-Lite register map**
 
----
-
-## Tools & Dependencies
-
-| Layer         | Tool / Technology         | Version / Notes                          |
-|---------------|---------------------------|------------------------------------------|
-| Simulation    | MATLAB                    | R2024a — data generation & quantization  |
-| RTL Design    | VHDL (IEEE 1076-2008)     | Vivado-synthesizable subset              |
-| Verification  | SystemVerilog (IEEE 1800) | Zynq VIP testbench                       |
-| SoC Design    | Xilinx Vivado             | 2023.2                                   |
-| IP Packaging  | Vivado IP Packager        | AXI4-Lite Slave wrapper auto-generated   |
-| VIP           | Xilinx Zynq-7000 VIP      | `processing_system7_vip_v1_0`            |
-| Target SoC    | Zynq-7000 (xc7z020)       | Validated on PYNQ-Z2 / Zybo pinout       |
+| Offset | Register   | R/W | Description           |
+|--------|------------|-----|-----------------------|
+| `0x00` | `slv_reg0` | W   | Radar distance input  |
+| `0x04` | `slv_reg1` | R   | Alarm output status   |
 
 ---
 
-## Results
+## Why this stack
 
-All four verification phases passed. Key findings:
+**Why Zynq-7000?** I wanted to actually exercise the PS–PL path, not just write RTL in isolation. The Zynq was the first FPGA I knew of that has both sides on one chip, and it's common enough that documentation and examples are everywhere.
 
-### Phase 1 — Power-on Reset & Warm-up Fix
+**Why AXI4-Lite (and not AXI-Stream or AXI-Full)?** My more experienced friend and mentor Atakan — an ARC researcher at ITU — suggested AXI4-Lite because it's the simplest AXI variant: single-beat, memory-mapped, no bursts. For a first SoC project, that was the right call. AXI-Full would have added complexity without teaching me anything the AXI-Lite version didn't.
 
-**Problem:** At simulation start, AXI bus initialization causes the filter pipeline to contain `0x0000` (0 cm), which incorrectly triggers a collision alarm — a false positive.
+**Why a 4-tap moving average filter?** I knew from my coursework that dividing by a power of two is basically free in hardware — you just bit-shift. So I picked `÷4` first, and the tap count followed (`>> 2` = divide by 4 = 4 taps). It's the dumbest possible filter, but it was a deliberate choice: the point of this project was the SoC integration and verification, not the DSP.
 
-**Root cause & fix:** Instead of patching RTL logic, VHDL filter registers were initialized to `(others => '1')` (safe maximum distance), and a **200 ns warm-up period** was inserted in the SystemVerilog testbench before any AXI transactions begin. The system stabilizes before tests run.
+**Why MATLAB for stimulus?** We'd used MATLAB in my first-semester courses, so fixed-point quantization and Gaussian noise were one-liners I already knew how to write.
 
-### Phase 2 — Nominal Case
+---
 
-Safe distances (3000, 4000, 5000) were injected via the virtual ARM processor. `Alarm_o` remained `0` in all cases — no false positives.
+## Tools
 
-### Phase 3 — Boundary / Corner Case
+| Layer         | Tool                          | Version        |
+|---------------|-------------------------------|----------------|
+| Data gen      | MATLAB                        | R2024a         |
+| RTL           | VHDL (IEEE 1076-2008)         | —              |
+| Testbench     | SystemVerilog                 | IEEE 1800      |
+| SoC / IP pkg  | Xilinx Vivado                 | 2023.2         |
+| VIP           | `processing_system7_vip_v1_0` | bundled        |
+| Target device | Zynq-7000 (`xc7z020`)         | PYNQ-Z2 pinout |
 
-The exact threshold value of `2000` was injected to probe `<=` vs `<` logic boundary behavior. The system correctly returned `Alarm_o = 0`, confirming the boundary condition is handled as `<` (strict less-than).
+---
 
-### Phase 4 — Danger & Recovery
+## The bugs I hit
 
+All four test phases pass now. Getting there took some work — here are the two bugs that actually made me learn something, each about an hour of head-scratching.
+
+### Bug 1 — the alarm fires before anything happens
+
+At `t=0`, the alarm was already on. No stimulus injected, nothing. Just a fresh simulation and the alarm screaming.
+
+I spent the first chunk of debugging convinced my threshold logic was wrong. It wasn't. What was happening: when the AXI bus and registers initialize, `slv_reg0` comes up as `0x0000`. The filter reads this as "distance = 0 cm," which is obviously below the collision threshold, so the alarm fires immediately — before any real data has even been sent.
+
+I thought about two fixes:
+
+- **(a)** Add a "data valid" flag in VHDL and gate the alarm on it.
+- **(b)** Initialize the filter pipeline to a safe value (`(others => '1')` = max distance) and wait for the AXI bus to settle in the testbench before driving anything.
+
+I went with (b). Option (a) is cleaner in a real product, but for this project it would have meant adding a whole state bit for a condition that only exists at `t=0`. In VHDL:
+
+```vhdl
+signal stage : unsigned_array := (others => (others => '1'));
 ```
-Inject 1500  → Alarm_o = 1  ✓  (Collision danger detected)
-Inject 3141  → Alarm_o = 0  ✓  (System fully recovered)
+
+And in the SystemVerilog testbench, a short wait before the first write:
+
+```systemverilog
+#200ns;  // let the AXI bus reset and the filter warm up
 ```
 
-The system correctly transitions back to safe state — no latch-up or stuck fault. (3141 was chosen as an easter egg to π :) )
+False alarm gone.
+
+### Bug 2 — negative distance reads as "totally safe"
+
+While validating the MATLAB output, I noticed something weird: every once in a while the filter would report a massive distance — like `0xFFFF` — even when the sensor value was small. That's the opposite of dangerous. That's "safest possible."
+
+The Gaussian noise was occasionally producing negative distance values (physically nonsense, numerically real). When those negatives were cast to unsigned 16-bit, two's complement kicked in: `-1` became `0xFFFF`. The filter then dutifully passed this along as a huge, reassuring distance.
+
+I could have fixed it in VHDL by adding a check on the input path. But that costs a comparator on every clock cycle forever, to catch something that only happens in the stimulus. One line in MATLAB — clamping negatives to zero before quantization — solved it permanently and cost nothing at runtime. That felt like the right layer.
+
+### Test results
+
+| Phase | Input                            | Expected            | Result |
+|-------|----------------------------------|---------------------|--------|
+| 1     | Reset & warm-up                  | `Alarm=0`           | ✓      |
+| 2     | Safe distances (3000, 4000, 5000)| `Alarm=0`           | ✓      |
+| 3     | Exact threshold value            | `Alarm=0` (`<`, not `<=`) | ✓  |
+| 4     | Danger (1500) → Recovery (3141)  | `Alarm=1` → `Alarm=0` | ✓    |
+
+> 📷 **Add here:** `docs/waveform_phase4.png` — waveform showing the alarm transition and recovery in Phase 4
+
+### Resource utilization
+
+> 📊 **Add here:** Post-synthesis utilization from Vivado (`synth_1` → Report Utilization). The table should look roughly like:
+>
+> ```
+> LUT:  <x> / 53200
+> FF:   <x> / 106400
+> DSP:  <x> / 220
+> BRAM: 0  / 140
+> ```
+
+The filter uses `>> 2` specifically to avoid inferring a DSP slice for what should be a free shift. If the utilization shows 0 DSPs used by `collision_monitor`, that's the whole argument for the bit-shift made visible.
 
 ---
 
-## File Structure
+## File structure
 
 ```
 zynq-collision-monitor/
-│
 ├── matlab/
-│   └── noisy_distance_generator.m      # Radar sensor simulation, fixed-point export
-│
+│   └── noisy_distance_generator.m
 ├── rtl/
-│   ├── collision_monitor.vhd           # Top-level module
-│   ├── moving_average_filter.vhd       # 4-stage shift register + bit-shift ÷4
-│   └── decision_guard.vhd             # Threshold comparator, Alarm_o output
-│
+│   ├── collision_monitor.vhd           # Top module (AXI wrapper)
+│   ├── moving_average_filter.vhd       # 4-tap, ÷4 as bit-shift
+│   └── decision_guard.vhd              # Threshold comparator
 ├── sim/
-│   ├── tb_sensor_reader.vhd            # Offline VHDL testbench (pre-AXI verification)
-│   └── tb_zynq_vip.sv                  # SystemVerilog + Zynq VIP (full SoC simulation)
-│
+│   ├── tb_sensor_reader.vhd            # Offline RTL testbench
+│   └── tb_zynq_vip.sv                  # Full SoC simulation with Zynq VIP
 ├── vivado/
-│   ├── ip/                             # Packaged AXI4-Lite Custom IP
-│   └── block_design/                  # Zynq PS + AXI SmartConnect + collision_monitor
-│
+│   ├── ip/                             # Packaged AXI4-Lite IP
+│   └── block_design/
 ├── data/
-│   ├── noisy_distance_data.txt         # MATLAB-generated hex input stimulus
-│   └── hw_results.txt                  # VHDL datalogger output (offline sim)
-│
+│   ├── noisy_distance_data.txt
+│   └── hw_results.txt
 └── README.md
 ```
 
 ---
 
-## How to Run
+## How to run
 
-### 1. Generate stimulus data (MATLAB)
+### 1. Generate stimulus
 
 ```matlab
-% matlab/noisy_distance_generator.m
+cd matlab
 run noisy_distance_generator.m
-% Output: data/noisy_distance_data.txt
+% Output: ../data/noisy_distance_data.txt
 ```
 
-### 2. Offline RTL verification (VHDL testbench)
+### 2. Offline RTL testbench (fast sanity check)
 
-Open `sim/tb_sensor_reader.vhd` in Vivado Simulator or ModelSim.  
-Ensure `data/noisy_distance_data.txt` is on the simulation file path.  
-Run simulation — results are logged to `data/hw_results.txt`.
+Open `sim/tb_sensor_reader.vhd` in the Vivado Simulator. Make sure `data/noisy_distance_data.txt` is reachable from the sim working directory. Results log to `data/hw_results.txt`.
 
-### 3. SoC simulation with Zynq VIP
+### 3. Full SoC simulation with Zynq VIP
 
-1. Open Vivado project and load `vivado/block_design/`
-2. Verify IP references resolve (`collision_monitor_v1_0` from `vivado/ip/`)
-3. Set `sim/tb_zynq_vip.sv` as the top-level simulation source
-4. Run behavioral simulation — all four test phases print to the Tcl console:
+1. Open the Vivado project at `vivado/block_design/`.
+2. Confirm `collision_monitor_v1_0` resolves from `vivado/ip/`.
+3. Set `sim/tb_zynq_vip.sv` as the top simulation source.
+4. Run the behavioral simulation. The Tcl console prints:
 
 ```
 TEST 1 - Power-on reset & warm-up
 TEST 2 - Nominal case (safe distances)
-TEST 3 - Boundary / corner case (value: 2000)
+TEST 3 - Boundary / corner case
 TEST 4 - Danger & Recovery sequence
 SUCCESS: System fully recovered from danger state.
 ```
 
-> **Note:** No physical hardware or Vitis/SDK installation is required. All validation runs in Vivado's built-in simulator.
+No hardware, no Vitis, no SDK needed.
 
 ---
 
-## Lessons Learned
+## What I learned
 
-**Virtual Prototyping works.** The absence of physical hardware was the project's hardest constraint — and ultimately its most instructive one. Designing around that constraint forced a more rigorous verification methodology than would have been natural with a board in hand.
+**My bugs weren't where I thought they were.** Both times I first assumed the RTL was broken, and both times the RTL was fine — the stimulus around it wasn't. That's a lesson I'll carry: if the logic looks right on paper, question the testbench before you question the design.
 
-**Testbench quality is not optional.** The warm-up bug (Phase 1) would have been nearly impossible to catch with ad hoc testing. Structured, phased verification — even for a student project — surfaces root causes instead of symptoms.
+**Pick the layer you fix the bug in.** Bug 2 was fixable in MATLAB, in VHDL, or in the testbench. All three "work." Only one is cheap forever. That kind of choice isn't a detail — it's the actual engineering.
 
-**Resource optimization starts at the algorithm level.** The choice to use bit-shifting (`>> 2`) instead of a division operator for the averaging filter was not premature optimization — it was the correct RTL design decision from the start. Division operators infer expensive DSP primitives; bit-shifts are free in logic.
+**`>> 2` is not the same thing as `/ 4`.** I understood that as a fact from coursework. Writing the filter and then looking at what Vivado synthesized made it feel true for the first time.
 
-**Fixed-point thinking must precede RTL design.** Handling the two's complement hazard (negative distance → `0xFFFF` → false "safe" reading) in MATLAB before the data ever reached the hardware was the right place to solve it. Hardware fault prevention is cheaper than hardware fault handling.
-
----
-
-## Known Limitations & Roadmap
-
-| Area | Current State | Planned Improvement |
-|------|--------------|---------------------|
-| Filter architecture | Moving average (FIR-0) via bit-shift | IIR/FIR filter via MATLAB HDL Coder |
-| Data transport | AXI4-Lite (memory-mapped, register-level) | AXI-Stream for continuous sensor data |
-| Physical validation | Simulation only | Hardware bring-up on PYNQ-Z2 or Zybo with Vitis bare-metal C |
-
-The generated `.xsa` (Xilinx Support Archive) is ready for Vitis import the moment a Zynq-7000 board becomes available.
+**Know when to ask.** The AXI4-Lite choice, some of the verification methodology — I got there faster because I had Atakan to ask. Trying to reinvent everything from scratch would have cost me weeks, not hours.
 
 ---
 
-## Background
+## Limitations & what I'd do next
 
-Built during the 2nd semester of an Electrical and Computer Engineering program as a self-directed deep-dive into SoC design methodology. The goal was to go beyond coursework exercises and build something that reflects how FPGA-based systems are actually verified in industry — with structured test phases, explicit design decisions, and honest documentation of trade-offs.
+| Area | Now | Next |
+|------|-----|------|
+| Filter | 4-tap moving average | A real IIR, generated via MATLAB HDL Coder |
+| Transport | AXI4-Lite | AXI-Stream for continuous sensor data |
+| Validation | Simulation only | Hardware bring-up on a PYNQ-Z2 or Zybo when I can get my hands on one |
+
+The `.xsa` is exported and ready for Vitis the moment I have a real board.
 
 ---
 
-*Designed and verified entirely in simulation. Physical hardware not required.*
+## Acknowledgments
+
+Thanks to **Atakan Beyen**, ARC researcher at ITU, who mentored me through the SystemVerilog and AXI side of this project. A lot of what I learned about verification methodology came out of conversations with him.
+
+---
+
+## Context
+
+Built as a self-directed project that started in the break after my 1st semester of Electrical and Computer Engineering and continued into the early weeks of the 2nd semester. The goal wasn't to build a working radar — it was to understand how an FPGA-based system is actually designed and verified, end to end, and to do it without waiting for a board to arrive.
+
+Inspired by a [SawStop](https://www.sawstop.com/) demo video. Different domain, same idea: see the danger, stop in hardware.
