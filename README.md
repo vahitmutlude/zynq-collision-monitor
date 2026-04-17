@@ -55,7 +55,7 @@ Noisy radar distance data → filtered in VHDL on the PL side → a virtual ARM 
 └─────────────────────┘
 ```
 
-> 📷 **Add here:** `docs/block_design.png` — Vivado Block Design screenshot
+![Vivado Block Design](docs/block_design.png)
 
 **AXI4-Lite register map**
 
@@ -137,20 +137,29 @@ I could have fixed it in VHDL by adding a check on the input path. But that cost
 | 3     | Exact threshold value            | `Alarm=0` (`<`, not `<=`) | ✓  |
 | 4     | Danger (1500) → Recovery (3141)  | `Alarm=1` → `Alarm=0` | ✓    |
 
-> 📷 **Add here:** `docs/waveform_phase4.png` — waveform showing the alarm transition and recovery in Phase 4
+![Full test execution waveform](docs/waveform_full.png)
+
+A single simulation run captures all four phases:
+
+- **Phase 1 (~0–1 µs):** `alarm_o` is high from t=0 because the filter initializes to zero — the warm-up bug described above. Once the filter settles, the alarm drops.
+- **Phase 2 (~1–4.8 µs):** Safe distances (3141, 3000, 4000, 5000) are injected via AXI writes. `alarm_o` stays at 0 throughout.
+- **Phase 3 (~4.8–5.3 µs):** Distance is driven to exactly 2000 (the threshold). `alarm_o` stays at 0, confirming the comparator uses `<`, not `<=`.
+- **Phase 4 (~5.3–7 µs):** Distance drops to 1500 — `alarm_o` fires, and `read_val` flips from `0x00000000` to `0x00000001` on the AXI read. Then 3141 is injected and the alarm clears cleanly.
 
 ### Resource utilization
 
-> 📊 **Add here:** Post-synthesis utilization from Vivado (`synth_1` → Report Utilization). The table should look roughly like:
->
-> ```
-> LUT:  <x> / 53200
-> FF:   <x> / 106400
-> DSP:  <x> / 220
-> BRAM: 0  / 140
-> ```
+### Resource utilization
 
-The filter uses `>> 2` specifically to avoid inferring a DSP slice for what should be a free shift. If the utilization shows 0 DSPs used by `collision_monitor`, that's the whole argument for the bit-shift made visible.
+Post-synthesis utilization for `collision_monitor_ip` (out-of-context) on `xc7z020`:
+
+| Resource | Used | Available | Utilization |
+|----------|------|-----------|-------------|
+| LUT      | 105  | 53 200    | 0.20%       |
+| FF       | 174  | 106 400   | 0.16%       |
+| **DSP**  | **0**| 220       | **0.00%**   |
+| BRAM     | 0    | 140       | 0.00%       |
+
+The `÷4` in the moving average filter is written as `>> 2`, which Vivado maps to wiring — no logic cost. The `0` in the DSP row is the whole point: a naive `/4` would have inferred a DSP slice for a division that doesn't need one. The FF count breaks down roughly as 64 for the two 32-bit AXI registers, 64 for the 4-tap 16-bit shift register in the filter, and the rest for control logic.
 
 ---
 
