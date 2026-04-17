@@ -137,7 +137,7 @@ I could have fixed it in VHDL by adding a check on the input path. But that cost
 | 3     | Exact threshold value            | `Alarm=0` (`<`, not `<=`) | ✓  |
 | 4     | Danger (1500) → Recovery (3141)  | `Alarm=1` → `Alarm=0` | ✓    |
 
-![Full test execution waveform](docs/waveform_full.png)
+![Full test execution waveform](docs/waveform_full.gif)
 
 A single simulation run captures all four phases:
 
