@@ -11,7 +11,7 @@
 
 ## How this project started
 
-I was researching FPGAs during my semester break when I came across a YouTube video of a SawStop table saw — the kind that detects a finger touching the blade and slams the brake in milliseconds to avoid a serious injury. I kept thinking: *the same idea, but with a radar and a car.* A system that sees something coming too close and reacts, fast, in hardware.
+I was researching FPGAs during my semester break when I came across a [YouTube video of a SawStop table saw](https://www.youtube.com/watch?v=fq3o0VGUh50) — the kind that detects a finger touching the blade and slams the brake in milliseconds to avoid a serious injury. I kept thinking: *the same idea, but with a radar and a car.* A system that sees something coming too close and reacts, fast, in hardware.
 
 I didn't have a Zynq board. So the project evolved into what I could actually do without hardware: build the full HW/SW pipeline in simulation, using the Zynq VIP to stand in for a real ARM processor. That constraint turned out to be the most interesting part.
 
@@ -254,4 +254,6 @@ Thanks to **Atakan Beyen**, ARC researcher at ITU, who mentored me through the S
 
 Built as a self-directed project that started in the break after my 1st semester of Electrical and Computer Engineering and continued into the early weeks of the 2nd semester. The goal wasn't to build a working radar — it was to understand how an FPGA-based system is actually designed and verified, end to end, and to do it without waiting for a board to arrive.
 
-Inspired by a [SawStop](https://www.sawstop.com/) demo video. Different domain, same idea: see the danger, stop in hardware.
+Inspired by this [SawStop demo video](https://www.youtube.com/watch?v=fq3o0VGUh50). Different domain, same idea: see the danger, stop in hardware.
+
+[![SawStop demo](https://img.youtube.com/vi/fq3o0VGUh50/maxresdefault.jpg)](https://www.youtube.com/watch?v=fq3o0VGUh50)
