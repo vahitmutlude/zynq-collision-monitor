@@ -1,21 +1,20 @@
 # zynq-collision-monitor
 
 > **HW/SW Co-Simulation of a Radar Collision Monitor on Zynq-7000 SoC**
-> Built entirely in simulation — no physical board required.
+> End-to-end pipeline verified entirely in simulation — no physical board required.
 
 [![VHDL](https://img.shields.io/badge/RTL-VHDL-blue?style=flat-square)](https://en.wikipedia.org/wiki/VHDL)
 [![SystemVerilog](https://img.shields.io/badge/Testbench-SystemVerilog-blueviolet?style=flat-square)](https://en.wikipedia.org/wiki/SystemVerilog)
 [![Vivado](https://img.shields.io/badge/Toolchain-Vivado%202023.2-red?style=flat-square)](https://www.xilinx.com/products/design-tools/vivado.html)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green?style=flat-square)](LICENSE)
 
 ---
 
 ## How this project started
 
-I was researching FPGAs during my semester break when I came across a [YouTube video of a SawStop table saw](https://www.youtube.com/watch?v=fq3o0VGUh50) — the kind that detects a finger touching the blade and slams the brake in milliseconds to avoid a serious injury. I kept thinking: *the same idea, but with a radar and a car.* A system that sees something coming too close and reacts, fast, in hardware.
+I was researching FPGAs during a semester break when I came across a [YouTube video of a SawStop table saw](https://www.youtube.com/watch?v=fq3o0VGUh50) — the kind that detects a finger touching the blade and slams the brake in milliseconds to avoid a serious injury. I kept thinking: *the same idea, but with a radar and a car.* A system that sees something coming too close and reacts, fast, in hardware.
 
-I didn't have a Zynq board. So the project evolved into what I could actually do without hardware: build the full HW/SW pipeline in simulation, using the Zynq VIP to stand in for a real ARM processor. That constraint turned out to be the most interesting part.
-
-I worked on it pretty much every day for about a week, morning to evening, during the break after my 1st semester — and kept coming back to it in the early weeks of the 2nd semester to extend and refine it.
+I didn't have a Zynq board. So the project evolved into what I could actually do without hardware: build the full HW/SW pipeline in simulation, using the Zynq VIP to stand in for a real ARM processor. That constraint turned out to be the most interesting part — verification methodology became the project, not an afterthought.
 
 ---
 
@@ -78,6 +77,17 @@ Noisy radar distance data → filtered in VHDL on the PL side → a virtual ARM 
 
 ---
 
+## Stimulus design choices
+
+A few small decisions in the MATLAB stimulus that paid off later:
+
+- **Hex, not binary, in the `.txt` file.** A real sensor would dump binary — fastest. But you can't eyeball a binary diff during debugging. Hex is the readable middle ground; the testbench converts to binary on read.
+- **Fixed-width entries (`000A`, not `A`).** No variable-length parsing in the testbench. One less edge case in the simulation harness.
+- **Distance × 100 in MATLAB.** Treats centimeters as the integer unit and keeps the entire pipeline floating-point-free.
+- **Negative noise values clamped to zero before quantization.** Bug 2 below explains why this matters — and why I fixed it here rather than in VHDL.
+
+---
+
 ## Tools
 
 | Layer         | Tool                          | Version        |
@@ -88,6 +98,14 @@ Noisy radar distance data → filtered in VHDL on the PL side → a virtual ARM 
 | SoC / IP pkg  | Xilinx Vivado                 | 2023.2         |
 | VIP           | `processing_system7_vip_v1_0` | bundled        |
 | Target device | Zynq-7000 (`xc7z020`)         | PYNQ-Z2 pinout |
+
+---
+
+## Test methodology
+
+The four-phase structure — power-on reset, nominal, boundary, danger/recovery — mirrors how German automotive and industrial vendors (Bosch, Siemens, Infineon) structure their verification. The discipline isn't novel; what was new for me was applying it end-to-end on a project this size, instead of writing one ad-hoc testbench per module.
+
+A fifth phase — replaying the noisy MATLAB stimulus through the AXI VIP — is deferred to the C/Vitis stage on real hardware, where the ARM core can stream the dataset rather than hardcoding it into the testbench.
 
 ---
 
@@ -144,9 +162,7 @@ A single simulation run captures all four phases:
 - **Phase 1 (~0–1 µs):** `alarm_o` is high from t=0 because the filter initializes to zero — the warm-up bug described above. Once the filter settles, the alarm drops.
 - **Phase 2 (~1–4.8 µs):** Safe distances (3141, 3000, 4000, 5000) are injected via AXI writes. `alarm_o` stays at 0 throughout.
 - **Phase 3 (~4.8–5.3 µs):** Distance is driven to exactly 2000 (the threshold). `alarm_o` stays at 0, confirming the comparator uses `<`, not `<=`.
-- **Phase 4 (~5.3–7 µs):** Distance drops to 1500 — `alarm_o` fires, and `read_val` flips from `0x00000000` to `0x00000001` on the AXI read. Then 3141 is injected and the alarm clears cleanly.
-
-### Resource utilization
+- **Phase 4 (~5.3–7 µs):** Distance drops to 1500 — `alarm_o` fires, and `read_val` flips from `0x00000000` to `0x00000001` on the AXI read. Then 3141 is injected and the alarm clears cleanly. *(The recovery value is a quiet π nod — any number above the 2000 threshold would have worked.)*
 
 ### Resource utilization
 
@@ -189,6 +205,8 @@ zynq-collision-monitor/
 
 ## How to run
 
+> Tested on **Vivado 2023.2**. Earlier versions may require re-exporting the `.xsa` and re-packaging the IP.
+
 ### 1. Generate stimulus
 
 ```matlab
@@ -216,7 +234,7 @@ TEST 4 - Danger & Recovery sequence
 SUCCESS: System fully recovered from danger state.
 ```
 
-No hardware, no Vitis, no SDK needed.
+Fully reproducible in Vivado Simulator — no board, no Vitis, no SDK required.
 
 ---
 
@@ -252,8 +270,6 @@ Thanks to **Atakan Beyen**, ARC researcher at ITU, who mentored me through the S
 
 ## Context
 
-Built as a self-directed project that started in the break after my 1st semester of Electrical and Computer Engineering and continued into the early weeks of the 2nd semester. The goal wasn't to build a working radar — it was to understand how an FPGA-based system is actually designed and verified, end to end, and to do it without waiting for a board to arrive.
+Built as a self-directed project to understand how an FPGA-based system is actually designed and verified, end to end — and to do it without waiting for a board to arrive. The goal wasn't to build a working radar; it was to walk the full path from MATLAB stimulus to AXI-mapped IP to VIP-driven testbench.
 
 Inspired by this [SawStop demo video](https://www.youtube.com/watch?v=fq3o0VGUh50). Different domain, same idea: see the danger, stop in hardware.
-
-[![SawStop demo](https://img.youtube.com/vi/fq3o0VGUh50/maxresdefault.jpg)](https://www.youtube.com/watch?v=fq3o0VGUh50)
